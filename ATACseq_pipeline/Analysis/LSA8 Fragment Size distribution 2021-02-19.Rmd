@@ -1,0 +1,119 @@
+---
+title: "LSA8 Fragment Size distribution"
+author: "Joanna Yeung"
+date: "2/17/2021"
+output: html_document
+---
+
+make object with samples names first. then use for loop and paste to concentenate the file names. 
+```{r}
+#hist_data_withoutdups.log from all of the samples to generate histograms of fragment size distributions & summary "violin plots. 
+
+# make vector with sample names
+samplesNames <- c("cycling-1","cycling-2","cycling-3",
+"Quiescent-1", "Quiescent-2","Quiescent-3",
+"day6-1","day6-2","day6-3",
+"day12-1","day12-2","day12-3",
+"day16-1","day16-2","day16-3",
+"day28-1","day28-2","day28-3",
+"DDIS-1","DDIS-2","DDIS-3")
+
+# to create master dataframe that contains all samples' fragment size distributions. 
+
+# 1. need to create empty list object to store fragment size distribution data (hist_data_withoutdups.log file). 
+samplesList <- list()
+
+# 2. use for loop to read in hist_data_withoutdups.log file from their original file location. 
+for(i in 1:length(samplesNames)){
+  samplesList[[i]] <- read.table(paste0("/rugpfs/fs0/risc_lab/scratch/jyeung/LSA8/ATACseq_pipeline/", samplesNames[i] ,"/hist_data_withoutdups.log"),  skip=10, header=T)
+  
+# 3.name each object in list by sample names. 
+  names(samplesList)[i] <- samplesNames[i]
+}
+
+# 4. create dataframe of insert sizes
+insertsize <- data.frame(insert_size=20:1000)
+
+# 5. create dataframe where all the samples' fragment size distributions will be stored
+allSamples <- data.frame(insert_size=20:1000)
+
+# 6. use for loop to create a allSamplesTmp (Tmp for temporary) object where the insertsize dataframe will be merged to each samples' dataframe.
+for(i in 1:length(samplesList)){
+  allSamplesTmp <- merge(insertsize, samplesList[[i]], by="insert_size", all=T)
+
+#7. merge allSamplesTmp information to final allSamples dataframe. You want to do it this way instead because if you merge first with only allSamples dataframe, the first column is just the insert_sizes which causes all the columns to contain insert_sizes values. 
+  
+  allSamples <- merge(allSamples, allSamplesTmp, by="insert_size", all=T)
+}
+colnames(allSamples)[2:22] <- names(samplesList)
+```
+
+```{r}
+# 8. replace NAs with 0s instead to make it plottable. 
+allSamples[is.na(allSamples)] <- 0
+```
+
+```{r}
+allSamples2 <- allSamples[, -1]
+listofSamples <- list()
+allCounts <- numeric()
+for (i in 1:length(allSamples2)){
+  listofSamples[[i]] <- allSamples2[, i]
+  names(listofSamples)[i] <- colnames(allSamples2)[i]
+}
+
+allCounts <- unlist(listofSamples, use.names=FALSE)
+allSamples3 <- data.frame(insert_size=rep(20:1000, length(samplesList)), allCounts = allCounts, sampleNames=rep(names(samplesList), each=nrow(allSamples2)))
+```
+
+```{r}
+allSamples3$Timepoint <- gsub("-[0-9]", "", allSamples3$sampleNames)
+```
+
+```{r}
+library(ggplot2)
+ggplot(allSamples3[allSamples3$sampleNames %in% samplesNames[1:6], ], aes(x=insert_size, y=allCounts, colour=sampleNames)) + 
+  geom_line(size=0.5) +
+   theme_bw(base_size = 10) + 
+  ylab("Number of Reads") + 
+  ggtitle("Fragment Length Distribution of all Samples") + 
+  theme(legend.position="bottom")
+```
+```{r}
+Cycling_and_Quies <- ggplot(allSamples3[allSamples3$sampleNames %in% samplesNames[1:6], ], aes(x=insert_size, y=allCounts, colour=sampleNames)) + 
+  scale_x_continuous(breaks=seq(50, 1000, by=50))+
+  facet_wrap(~Timepoint, scales="free_x")+
+  scale_color_brewer(palette="Set3") +
+  geom_line(size=0.5) +
+   theme_bw(base_size = 10) + 
+  ylab("Number of Reads") + 
+  theme(legend.position="bottom")
+Cycling_and_Quies
+```
+
+```{r}
+Day6_and_day12 <- ggplot(allSamples3[allSamples3$sampleNames %in% samplesNames[7:12], ], aes(x=insert_size, y=allCounts, colour=sampleNames)) + 
+  scale_x_continuous(breaks=seq(50, 1000, by=50))+
+  facet_wrap(~Timepoint, scales="free_x")+
+  scale_color_brewer(palette="Set2") +
+  geom_line(size=0.5) +
+   theme_bw(base_size = 10) + 
+  ylab("Number of Reads") + 
+  theme(legend.position="bottom")
+Day6_and_day12
+```
+```{r}
+Day16_day28_DDIS <- ggplot(allSamples3[allSamples3$sampleNames %in% samplesNames[13:21], ], aes(x=insert_size, y=allCounts, colour=sampleNames)) + 
+  scale_x_continuous(breaks=seq(50, 1000, by=50))+
+  facet_wrap(~Timepoint, scales="free_x")+
+  scale_color_brewer(palette="Set1") +
+  geom_line(size=0.5) +
+   theme_bw(base_size = 10) + 
+  ylab("Number of Reads") + 
+  theme(legend.position="bottom")
+Day16_day28_DDIS
+```
+
+
+
+

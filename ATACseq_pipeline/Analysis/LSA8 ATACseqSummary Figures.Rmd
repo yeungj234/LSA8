@@ -1,0 +1,54 @@
+---
+title: "LSA8 ATACseqSummary.log Figures"
+author: "Joanna Yeung"
+date: "2/22/2021"
+output: html_document
+---
+
+```{r}
+# Read in LSA8 fastq2bam Summary log file. 
+ATACseq_Summary <- read.table("/rugpfs/fs0/risc_lab/scratch/jyeung/LSA8/ATACseq_pipeline/ATACseqRunSummary.log",skip=38, header=T, skipNul = TRUE)
+
+# using gsub function, remove -[0-9] at the end of sample names which indicates the replicate number of the sample
+ATACseq_Summary$TIMEPOINT <- gsub("-[0-9]", "", ATACseq_Summary$SAMPLE)
+ATACseq_Summary$TIMEPOINT <- factor(ATACseq_Summary$TIMEPOINT, levels=unique(ATACseq_Summary$TIMEPOINT))
+
+ATACseq_Summary$SAMPLE <- factor(ATACseq_Summary$SAMPLE, levels=ATACseq_Summary$SAMPLE)
+```
+```{r}
+library(ggplot2)
+TSS_enrichment_scores <- ggplot(ATACseq_Summary, aes(x=SAMPLE, y=PEAK_INSERTIONS_TSS, fill=TIMEPOINT, label=PEAK_INSERTIONS_TSS)) + geom_bar(stat="identity")+
+  geom_text(position = position_jitter(width=0.15, height=0.15), check_overlap = T)+
+  facet_wrap(~TIMEPOINT, scales="free_x")+
+  scale_colour_manual(values=c("black", "purple"))+
+  theme_bw() + 
+  xlab("Sample") + 
+  ylab("TSS Enrichment Scores") + 
+  ggtitle("TSS Enrichment Scores") +
+  theme(legend.title=element_blank(), legend.position = "bottom") # remove legend title 
+TSS_enrichment_scores
+```
+
+```{r}
+LibrarySizeFig <- ggplot(ATACseq_Summary, aes(x=SAMPLE, y=ESTIMATED_LIBRARY_SIZE, color=TIMEPOINT, label=ESTIMATED_LIBRARY_SIZE)) + geom_point()+  geom_text(position = position_jitter(width=0.15, height=0.15), check_overlap = T) + 
+  theme_bw() + 
+  xlab("Sample") + 
+  ylab("Estimated Number of Unique Fragments") + 
+  ggtitle("Estimated Library Size") +
+  theme(legend.title=element_blank(), legend.position = "bottom")
+LibrarySizeFig
+```
+```{r}
+PostFilteredReadsFig <- ggplot(ATACseq_Summary, aes(x=SAMPLE, y=READ_PAIRS_POST_FILTER, colour=TIMEPOINT, label=READ_PAIRS_POST_FILTER)) +
+  geom_text(position = position_jitter(width=0.15, height=0.15), check_overlap = T)+
+  geom_point() + 
+  theme_bw() + 
+  xlab("Sample") + 
+  ylab("Number of Read Pairs") + 
+  ggtitle("Post Filtered Read Pairs")+
+  theme(legend.title=element_blank(), legend.position = "bottom") # remove legend title 
+PostFilteredReadsFig
+```
+```{r}
+FRiP <- 
+
